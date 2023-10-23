@@ -1,0 +1,24 @@
+    #upload infomation to storage account container
+    - task: AzurePowerShell@5
+      displayName: 'upload files to container'
+      inputs:
+        azureSubscription: ${{ parameters.serviceConnectionName }}
+        scriptType: 'InlineScript'
+        Inline: |
+          #create context by using OAuth Authentication
+          $ctx = New-AzStorageContext -StorageAccountName "$(storageAccountStateFilesName)" -UseConnectedAccount;
+
+          #get childitem in folder 
+          $items = get-childitem -path $(Pipeline.Workspace)/toUpload
+          
+          #show in console
+          $items
+
+          #upload files to storage account
+          foreach($item in $items){
+            Set-AzStorageBlobContent -Container $(devOpsForkRepositoryId) -Context $ctx -File $item.FullName;
+            echo "##[info] file $item.Name added to container $(devOpsForkRepositoryId)";
+          }
+        errorActionPreference: 'stop' # Optional. Options: stop, continue, silentlyContinue
+        azurePowerShellVersion: 'latestVersion' # Required. Options: latestVersion, otherVersion
+        pwsh: true  
