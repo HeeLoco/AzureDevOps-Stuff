@@ -1,0 +1,30 @@
+    - task: AzureCLI@2
+      displayName: 'set permission'
+      name: set_permission
+      inputs:
+        azureSubscription: ${{ parameters.serviceConnectionName }}
+        scriptType: 'pscore'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo $(System.AccessToken) | az devops login
+          $pipelineId = $(create_pipeline.pipelineId) 
+          $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
+          $headers.Add("Content-Type", "application/json")
+          $mypat = '$(System.AccessToken)'
+          $AzureDevOpsAuthenicationHeader = "Basic " + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$($mypat)"))
+          $headers.Add("Authorization", "$AzureDevOpsAuthenicationHeader")
+
+          $body = @"
+          {
+              `"pipelines`": [
+                  {
+                      `"id`": $pipelineId,
+                      `"authorized`": true
+                  }
+              ]
+          }
+          "@
+
+          $response = Invoke-RestMethod 'https://dev.azure.com/project name/project id/_apis/pipelines/pipelinePermissions/endpoint/object id of service connection?api-version=5.1-preview.1' -Method 'PATCH' -Headers $headers -Body $body
+          $response | ConvertTo-Json
+        addSpnToEnvironment: true
