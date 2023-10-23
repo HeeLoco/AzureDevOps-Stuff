@@ -1,0 +1,15 @@
+    #create container in storage account
+    - task: AzurePowerShell@5
+      displayName: 'create container'
+      inputs:
+        azureSubscription: ${{ parameters.serviceConnectionName }}
+        scriptType: 'InlineScript'
+        Inline: |
+          #create context by using OAuth Authentication
+          $ctx = New-AzStorageContext -StorageAccountName "$(storageAccountStateFilesName)" -UseConnectedAccount;
+          #create container for the new use case
+          New-AzStorageContainer -Name $(devOpsForkRepositoryId) -Context $ctx;
+          echo "##[info] container $(devOpsForkRepositoryId) created in $(storageAccountStateFilesName)";
+        errorActionPreference: 'stop' # Optional. Options: stop, continue, silentlyContinue
+        azurePowerShellVersion: 'latestVersion' # Required. Options: latestVersion, otherVersion
+        pwsh: true
