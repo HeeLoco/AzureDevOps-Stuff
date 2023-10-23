@@ -1,0 +1,10 @@
+    #remove file from storage account 
+    - task: AzureCLI@2
+      displayName: 'delete it from storage account'
+      inputs:
+        azureSubscription: $(serviceConnectionName)
+        scriptType: 'pscore'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          #az storage blob delete --container-name $(azInputStorageAccountContainerName) --name "$(valuesFileName)" --account-name $(azInputStorageAccountName) --auth-mode login;
+        addSpnToEnvironment: false
