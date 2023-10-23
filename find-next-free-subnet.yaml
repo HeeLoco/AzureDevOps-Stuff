@@ -1,0 +1,55 @@
+    #find next free subnet and create file for terraform
+    - task: AzurePowerShell@5
+      displayName: 'determine and create file'
+      inputs:
+        azureSubscription: ${{ parameters.serviceConnectionName }}
+        scriptType: 'InlineScript'
+        Inline: |
+          #set variables
+          $resourceGroupName = "${{ parameters.azVirtualNetworkResourceGroupName }}";
+          $virtualNetworkName = "${{ parameters.azVirtualNetworkName }}";
+
+          #install and import module 
+          Install-Module SixPivot.Azure -Force;
+          Import-Module SixPivot.Azure;
+
+          #create vnetsummary object
+          write-host("get vnet with added module and find next subnet range");
+          $vnet = Find-FreeSubnets -ResourceGroup $resourceGroupName -VNetName $virtualNetworkName;
+          
+          #loop and accept only range of /28 = 11 ips in azure
+          foreach($range in $vnet.Available.CIDRAvailable){
+            if($range.split('/')[1] -eq "28"){
+              $calculatedSubnet = $range;
+              break;
+            }
+          }
+          #clear variable
+          $vnet = $null;
+          #try to create subnet and remove it after that
+          #set vnet object for later usage
+          write-host("get vnet the normal way");
+          $vnet = Get-AzVirtualNetwork -Name $virtualNetworkName -ResourceGroupName $resourceGroupName;
+          
+          #create subnet
+          write-host("create subnet");
+          $subnetTest = New-AzVirtualNetworkSubnetConfig -Name "test-by-pipeline" -AddressPrefix $calculatedSubnet;
+          $vnet.Subnets.Add($subnetTest)
+          Set-AzVirtualNetwork -VirtualNetwork $vnet;
+
+          #remove again
+          write-host("remove subnet");
+          Remove-AzVirtualNetworkSubnetConfig -Name "test-by-pipeline" -VirtualNetwork $vnet;
+          $vnet | Set-AzVirtualNetwork;
+
+          #show desired and usable subnet
+          write-host("this should be the subnet: $calculatedSubnet");
+
+          #create hashtable, json and file
+          $hash = @{address_range = "$calculatedSubnet"};
+          $json = ConvertTo-Json $hash;
+          Out-File -FilePath $(Build.ArtifactStagingDirectory)/${{ parameters.terraformSubnetValuesFileName }} -InputObject $json;
+        errorActionPreference: 'stop' # Optional. Options: stop, continue, silentlyContinue
+        azurePowerShellVersion: 'latestVersion' # Required. Options: latestVersion, otherVersion
+        pwsh: true
+    
