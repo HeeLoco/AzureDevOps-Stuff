@@ -1,0 +1,35 @@
+    #custom check out of new fork
+    - task: PowerShell@2
+      displayName: "Checkout - ${{ parameters.devOpsForkRepositoryName }}@main"
+      env:
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        GIT_REDIRECT_STDERR: '2>&1'  #need to investigate
+      inputs:
+        targetType: 'inline'
+        script: |
+          $url = "$(devOpsForkRepositoryUrl)";
+          echo "##[info] checking out in directory: $(localRepositoryDirectory)";
+          echo "##[info] checking out from url: $url";
+
+          #git remove all existing information
+          git rm -rf $(Build.Repository.LocalPath)
+
+          #create directory 
+          New-Item -Path "$(localRepositoryDirectory)" -ItemType Directory -Force;
+
+          #clone repository
+          $url_with_token = $url.replace('https://','https://$(System.AccessToken)@'); #add access token in url
+          git clone $url_with_token "$(localRepositoryDirectory)"
+          echo "##[info] check out done";
+          set-location "$(localRepositoryDirectory)"   
+          
+          #set git configuration
+          git config --global user.email "${{ parameters.gitUserMail }}"
+          git config --global user.name "${{ parameters.gitUserName }}"
+          git config --global core.autocrlf true
+          
+          #set url
+          git remote set-url origin $url_with_token 
+          echo "##[info] git remote set-url to origin done";
+        failOnStderr: true
+        pwsh: true
