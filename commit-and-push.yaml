@@ -1,0 +1,34 @@
+    #commit and push changes to fork
+    - task: PowerShell@2
+      displayName: "commit and push"
+      env:
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        GIT_REDIRECT_STDERR: '2>&1'
+      inputs:
+        targetType: 'inline'
+        script: |
+          #set variables
+          $url = "$(devOpsForkRepositoryUrl)";
+
+          #set directory
+          set-location "$(localRepositoryDirectory)"
+
+          #git add file
+          Write-Host ("`ngit add .");
+          git add .
+          
+          #git status
+          Write-Host ("`ngit status");
+          git status
+          
+          #git commit
+          Write-Host ("`ngit commit with message");
+          git commit -m "add files by pipeline"
+          
+          #git push main to origin
+          Write-Host ("`ngit push main");
+          $url_with_token = $url.replace('https://','https://$(System.AccessToken)@'); #add access token in url
+          echo $url
+          git push # origin main
+        failOnStderr: true
+        pwsh: true
