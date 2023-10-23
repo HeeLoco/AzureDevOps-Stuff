@@ -1,0 +1,29 @@
+  - job: job_verify_repository_id
+    displayName: 'verify repository id'
+    condition: and(succeeded(), or(eq(dependencies.job_verify_mode.outputs['verify.mode'], 'update'), eq(dependencies.job_verify_mode.outputs['verify.mode'], 'remove') ) ) #depending on the mode we have to verify the repository id
+    dependsOn: job_verify_mode
+    #steps of job
+    steps:
+    - pwsh: (gci  env:* | sort-object name) 
+    #verify input information by using regex
+    - pwsh: |
+        #read file into variable 
+        $inputValues = Get-Content $(System.DefaultWorkingDirectory)\$(repoConfigsPath)\$(valuesFileName) | ConvertFrom-Json; #convert into object
+        
+        #find current id of the repository in inputValues
+        switch -Regex ($inputValues.repository_id){
+          '(?:\{{0,1}(?:[0-9a-fA-F]){8}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){12}\}{0,1})' {
+            [string]$repositoryId = $inputValues.repository_id
+          }
+          default{
+            echo "##vso[task.LogIssue type=error;]repository id may not set or correct. It is not possible to continue";
+            exit 1;    
+          }
+        }
+        
+        #output
+        write-host("repository id is $repositoryId")
+        #create variable
+        Write-Host "##vso[task.setvariable variable=repositoryId;isOutput=true]$repositoryId"
+      displayName: 'verify repository id'
+      name: 'repositoryId'   
