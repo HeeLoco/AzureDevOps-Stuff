@@ -1,0 +1,63 @@
+  - job: job_create_fork
+    displayName: 'create fork'
+    dependsOn: job_define_subnet
+    steps:     
+    #disable checkout
+    - checkout: none    
+    
+    #use azure devops rest api to create a fork
+    - task: PowerShell@2
+      displayName: "call rest api"
+      name: restcall
+      env:
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+      inputs:
+        targetType: 'inline'
+        script: |
+          #force tls
+          #[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          #set url
+          $url = '${{ parameters.devOpsApiRepoUrl }}'
+          #header
+          $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
+          $headers.Add("Content-Type", "application/json")
+          $headers.Add("Authorization","Bearer $env:SYSTEM_ACCESSTOKEN");
+          #body
+          $body = "    {
+          `n        `"name`": `"${{ parameters.devOpsForkRepositoryName }}`",
+          `n        `"project`": {
+          `n            `"id`": `"${{ parameters.devOpsProjectId }}`"
+          `n        },
+          `n        `"parentRepository`": {
+          `n            `"id`": `"${{ parameters.devOpsParentRepositoryId }}`",
+          `n            `"project`": {
+          `n              `"id`": `"${{ parameters.devOpsProjectId }}`"            
+          `n        }
+          `n    }"
+          #show info
+          #$body
+          #$headers
+          #call rest api
+          $response = Invoke-RestMethod $url -Method 'POST' -Headers $headers -Body $body;
+          #output in console and in file
+          $response | ConvertTo-Json;
+          $response | ConvertTo-Json | out-file -filepath $(Build.ArtifactStagingDirectory)\apiResponse.json;
+          #extract information for later usage
+          #repository id
+          $repoId = $response.id;
+          echo "setting variable for further usage`ndevOpsForkRepositoryId: $repoId";
+          echo "##vso[task.setvariable variable=devOpsForkRepositoryId;isOutput=true]$repoId";
+          #repository url
+          $repositoryUrl = $response._links.web.href;
+          echo "setting variable for further usage`ndevOpsForkRepositoryUrl: $repositoryUrl";
+          echo "##vso[task.setvariable variable=devOpsForkRepositoryUrl;isOutput=true]$repositoryUrl";    
+        failOnStderr: true
+        pwsh: true
+    
+    #upload api response file to devops pipeline artifacts
+    - task: PublishBuildArtifacts@1
+      displayName: 'publish artifact'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'restDrop' 
+        publishLocation: 'Container'
