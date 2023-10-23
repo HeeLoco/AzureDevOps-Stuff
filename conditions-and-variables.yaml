@@ -1,0 +1,37 @@
+#++
+    condition: or(eq(stageDependencies.stage_verify_input.job_verify_mode.outputs['verify.mode'], 'update'), eq(stageDependencies.stage_verify_input.job_verify_mode.outputs['verify.mode'], 'remove'))
+    variables: 
+      devOpsForkRepositoryId: $[ stageDependencies.stage_verify_input.job_verify_repository_id.outputs['repositoryId.repositoryId'] ]
+#++
+    condition: eq(stageDependencies.stage_verify_input.job_verify_mode.outputs['verify.mode'], 'create')
+    variables: 
+      devOpsForkRepositoryId: $[ stageDependencies.stage_create.job_create_fork.outputs['restcall.devOpsForkRepositoryId'] ]
+#++
+      condition: and(succeeded('stage_verify_input'), in(dependencies.stage_create.result, 'Succeeded', 'Skipped'))
+#++
+    condition: and(succeeded('job_verify_mode','job_verify_backend_configuration'), in(dependencies.job_verify_repository_id.result, 'Succeeded', 'Skipped'))
+#++
+    condition: and(succeeded(), or(eq(dependencies.job_verify_mode.outputs['verify.mode'], 'update'), eq(dependencies.job_verify_mode.outputs['verify.mode'], 'remove') ) )
+#++
+  condition: and(succeeded('stage_verify_input'), eq(stageDependencies.stage_verify_input.outputs['job_verify_mode.verify.mode'], 'create'))
+    variables:
+      devOpsForkRepositoryId: $[ dependencies.job_create_fork.outputs['restcall.devOpsForkRepositoryId'] ]
+#++
+    variables:
+      devOpsForkRepositoryId: $[ dependencies.job_create_fork.outputs['restcall.devOpsForkRepositoryId'] ]
+      storageAccountStateFilesName: $[ stageDependencies.stage_verify_input.job_verify_backend_configuration.outputs['storageAccountName.storageAccountStateFilesName'] ]
+#++
+    variables:
+      devOpsForkRepositoryId: $[ dependencies.job_create_fork.outputs['restcall.devOpsForkRepositoryId'] ]
+#++
+    variables:
+      devOpsForkRepositoryId: $[ dependencies.job_create_fork.outputs['restcall.devOpsForkRepositoryId'] ]
+#++
+    variables:
+      devOpsForkRepositoryUrl: $[ dependencies.job_create_fork.outputs['restcall.devOpsForkRepositoryUrl'] ]
+      localRepositoryDirectory: "$(Build.Repository.LocalPath)/${{ parameters.devOpsForkRepositoryName }}"
+#++
+    variables:
+      devOpsForkRepositoryId: $[ dependencies.job_create_fork.outputs['restcall.devOpsForkRepositoryId'] ]
+      storageAccountStateFilesName: $[ stageDependencies.stage_verify_input.job_verify_backend_configuration.outputs['storageAccountName.storageAccountStateFilesName'] ]
+#++
