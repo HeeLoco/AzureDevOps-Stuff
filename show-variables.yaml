@@ -1,0 +1,6 @@
+#++
+    - pwsh: (gci  env:* | sort-object name) 
+#++    
+    - ${{ each var in variables }}:
+      - pwsh: Write-Host "${{ var.Key }} - ${{ var.Value }}"
+        displayName: 'Print variables via expression in the loop'
