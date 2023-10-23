@@ -1,0 +1,24 @@
+  - job: job_verify_backend_configuration
+    displayName: 'verify backend configuration'
+    dependsOn: job_verify_mode
+    condition: succeeded()
+    steps:
+    #verify information by using regex
+    - pwsh: |
+        #read file into variable 
+        $backendConfiguration = Get-Content $(System.DefaultWorkingDirectory)\$(repoConfigsPath)\$(terraformBackendConfigurationName);
+        #find storage account name 
+        [regex]$getStorageName = '\s*storage_account_name\s*=\s*"(?<storageName>.{3,24})"'; #set regular expression pattern
+        try{
+          [string]$storageName   = $getStorageName.Matches($backendConfiguration)[0].Groups["storageName"].Value;
+        }
+        catch{
+          echo "##vso[task.LogIssue type=error;]storageName may not correct. It is not possible to continue";
+          exit 1;
+        }
+        #output
+        Write-Host("storageName is $storageName")
+        #create variable
+        Write-Host "##vso[task.setvariable variable=storageAccountStateFilesName;isOutput=true;isreadonly=true]$storageName"
+      displayName: 'verify backend configuration'
+      name: 'storageAccountName'
