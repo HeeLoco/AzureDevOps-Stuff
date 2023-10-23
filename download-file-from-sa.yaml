@@ -1,0 +1,10 @@
+    #download file from storage account, and 
+    - task: AzureCLI@2
+      displayName: 'download from storage account'
+      inputs:
+        azureSubscription: $(serviceConnectionName)
+        scriptType: 'pscore'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az storage blob download --container-name $(azInputStorageAccountContainerName) --name "$(valuesFileName)" --account-name $(azInputStorageAccountName) --file $(System.DefaultWorkingDirectory)\$(repoConfigsPath)\$(valuesFileName) --auth-mode login; 
+        addSpnToEnvironment: false
