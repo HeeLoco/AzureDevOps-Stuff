@@ -1,0 +1,64 @@
+  - job: job_remove_file
+    displayName: 'remove values file from repo'
+    dependsOn: 
+    - job_verify_mode
+    - job_verify_repository_id
+    - job_verify_backend_configuration
+    - job_upload_file
+    condition: false #always()
+    steps:
+    #checkout own repository and persist credentials for later usage
+    - checkout: self
+      persistCredentials: true
+    #remove file, add, commit, fetch, push
+    - task: PowerShell@2
+      displayName: "remove and push"
+      env:
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        #GIT_REDIRECT_STDERR: '2>&1'  #need to investigate
+      inputs:
+        targetType: 'inline'
+        script: |
+          #git status detached main
+          Write-Host ("`ngit status detached main");
+          git status
+
+          #set git configuration
+          git config --global user.email $(gitUserMail)
+          git config --global user.name $(gitUserName)
+          
+          #fix detached branch
+          # write-host  ("`nchange to main branch to fix detached branch problem");
+          # git checkout -b main
+          
+          #git status main
+          Write-Host ("`ngit status main");
+          git status
+
+          #remove file values.json
+          Remove-Item -Path $(System.DefaultWorkingDirectory)\$(repoConfigsPath)\$(valuesFileName) -Force;
+
+          #git status main
+          Write-Host ("`ngit status main");
+          git status
+
+          #git add . 
+          Write-Host ("`ngit add .");
+          git add .
+
+          #git status main
+          Write-Host ("`ngit status main");
+          git status
+
+          #git commit
+          Write-Host ("`ngit commit with message with [skip ci]");
+          git commit -m "rm by pipeline [skip ci]"
+
+          #git fetch
+          Write-Host ("`ngit fetch");
+          git fetch
+
+          #git push
+          Write-Host ("`ngit push");
+          git push origin HEAD:main
+        pwsh: true
