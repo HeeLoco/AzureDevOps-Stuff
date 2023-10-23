@@ -1,0 +1,38 @@
+  - job: job_create_pipeline
+    displayName: 'create child pipeline'
+    dependsOn: 
+    - job_create_fork
+    - job_prepare_backend_configuration
+    variables:
+      devOpsForkRepositoryId: $[ dependencies.job_create_fork.outputs['restcall.devOpsForkRepositoryId'] ]
+    steps:     
+    #disable checkout
+    - checkout: none
+    #create azure devop pipeline using az pipelines command 
+    - task: AzurePowerShell@5
+      displayName: 'create pipeline'
+      name: create_pipeline
+      inputs:
+        azureSubscription: ${{ parameters.serviceConnectionName }}
+        scriptType: 'InlineScript'
+        Inline: |
+          #allow installing extensions without prompt
+          write-host("allow installing extensions without prompt");
+          az config set extension.use_dynamic_install=yes_without_prompt
+
+          #login 
+          echo $(System.AccessToken) | az devops login
+
+          #create pipeline
+          write-host("create pipeline");
+          $response = az pipelines create --name '$(devOpsForkRepositoryId)' --folder-path ${{ parameters.devOpsForkPipelinesPath }} --description 'automatic created pipeline for avd use cases' --repository '${{ parameters.devOpsForkRepositoryName }}' --branch main --repository-type tfsgit --yml-path '${{ parameters.repoPipelinesPath }}/${{ parameters.childPipelineYamlName}}' --skip-first-run true
+          $pipelineId = ($response | ConvertFrom-Json).id
+          Write-Host "##vso[task.setvariable variable=pipelineId;isOutput=true;isreadonly=true]$pipelineId"
+
+          #save id for later processes
+          Out-File -FilePath $(Build.ArtifactStagingDirectory)/azPipelinesResponse.json -InputObject $response;
+          #show file in console
+          get-content -path $(Build.ArtifactStagingDirectory)/azPipelinesResponse.json;
+        errorActionPreference: 'stop' # Optional. Options: stop, continue, silentlyContinue
+        azurePowerShellVersion: 'latestVersion' # Required. Options: latestVersion, otherVersion
+        pwsh: true
